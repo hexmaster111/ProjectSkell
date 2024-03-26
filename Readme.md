@@ -1,35 +1,19 @@
 ﻿
 
 ```SKELL
+varables are things that you can have string replaced on
 [vars]
-ask projectName
-somethingElse="10"
+varA=Var A Value
 [endvars]
+endvars is used to tell the skell program that we are done with varables in this file.
 
-[file Makefile]
-MODULE={projectName}
-... other stuff for the make file ...
+
+files are things that will be written to the filesystem after doing string replacement on the skell files.
+[file FileName.txt]
+I Will be written into the file!
+the value of varA is "{varA}"
 [eof]
+eof is used to show 'end of file'
 
-[file tb_{projectName}.cpp]
-#some c++ stuff
-#include <stdlib.h> ... and whatever
-#include "V{projectName}.h"
-#include "V{projectName}___024root.h"
-
-int main(int argc, char **argv, char **env){    
-    V{projectName} *dut = new V{projectName};
-    ... and other stuff
-}
-[eof]
-
-
-[file="{projectName}.sv"]
-module {projectName} (
-    input wire clk
-);
-
-endmodule;
-[eof]
 ```
 
