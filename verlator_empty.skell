@@ -1,0 +1,106 @@
+﻿[vars]
+projectName=my_cool_project
+[endvars]
+
+
+[file Makefile]
+MODULE={projectName}
+
+.PHONY:sim
+sim: waveform.vcd
+
+.PHONY:verilate
+verilate: .stamp.verilate
+
+.PHONY:build
+build: obj_dir/V$(MODULE)
+
+.PHONY:waves
+waves: waveform.vcd
+	@echo
+	@echo "### WAVES ###"
+	gtkwave waveform.vcd
+
+waveform.vcd: ./obj_dir/V$(MODULE)
+	@echo
+	@echo "### SIMULATING ###"
+	@./obj_dir/V$(MODULE)
+
+./obj_dir/V$(MODULE): .stamp.verilate
+	@echo
+	@echo "### BUILDING SIM ###"
+	make -C obj_dir -f V$(MODULE).mk V$(MODULE)
+
+.stamp.verilate: $(MODULE).sv tb_$(MODULE).cpp
+	@echo
+	@echo "### VERILATING ###"
+	verilator --Wall --trace -cc $(MODULE).sv --exe tb_$(MODULE).cpp
+	@touch .stamp.verilate
+
+.PHONY:lint
+lint: $(MODULE).sv
+	verilator --lint-only $(MODULE).sv
+
+.PHONY: clean
+clean:
+	rm -rf .stamp.*;
+	rm -rf ./obj_dir
+	rm -rf waveform.vcd
+[eof]
+
+
+[file tb_{projectName}.cpp]
+#include <stdlib.h>
+#include <iostream>
+#include <cstdlib>
+#include <verilated.h>
+#include <verilated_vcd_c.h>
+#include "V{projectName}.h"
+#include "V{projectName}___024root.h"
+
+#define MAX_SIM_TIME 300
+#define VERIF_START_TIME 7
+vluint64_t sim_time = 0;
+vluint64_t posedge_cnt = 0;
+
+int main(int argc, char **argv, char **env)
+{
+    srand(time(NULL));
+    Verilated::commandArgs(argc, argv);
+    V{projectName} *dut = new {projectName};
+
+    Verilated::traceEverOn(true);
+    VerilatedVcdC *m_trace = new VerilatedVcdC;
+    dut->trace(m_trace, 5);
+    m_trace->open("waveform.vcd");
+
+    while (sim_time < MAX_SIM_TIME)
+    {
+
+        dut->reset = 1;
+
+        if (sim_time <= VERIF_START_TIME)
+        {
+            dut->reset = 0;
+        }
+
+        dut->clock ^= 1;
+
+        dut->eval();
+        m_trace->dump(sim_time);
+        sim_time++;
+    }
+
+    m_trace->close();
+    delete dut;
+    exit(EXIT_SUCCESS);
+}
+[eof]
+
+[file {projectName}.sv]
+module {projectName} (
+    input wire clk
+);
+    
+endmodule;
+[eof]
