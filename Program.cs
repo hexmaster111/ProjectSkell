@@ -1,6 +1,8 @@
 ﻿// See https://aka.ms/new-console-template for more information
 
 
+using System.Diagnostics;
+
 
 if (args.Length < 1)
 {
@@ -15,7 +17,6 @@ if (!File.Exists(args[0]))
 }
 
 var fileText = File.ReadAllText(args[0]);
-
 
 List<Var> vars = new();
 List<SkellFile> skellFiles = new();
@@ -106,7 +107,33 @@ foreach (var file in skellFiles)
     toWrite.Add(new SkellFile(name, fileContents));
 }
 
-var outFolderName = "out";
+
+bool cliProvidedOutputDir = false;
+int cliProvidedOutputDirIndex = 0;
+
+string outFolderName = "";
+
+foreach (var arg in args)
+{
+    cliProvidedOutputDirIndex++;
+    if (arg == "-o")
+    {
+        cliProvidedOutputDir = true;
+        if (cliProvidedOutputDirIndex < 0 || cliProvidedOutputDirIndex >= args.Length)
+            throw new Exception("Got cli arg -o, but no out dir was provided");
+
+        outFolderName = args[cliProvidedOutputDirIndex];
+        break;
+    }
+}
+
+if (!cliProvidedOutputDir)
+{
+    Console.WriteLine("Project Folder Name?");
+    outFolderName = Console.ReadLine()!;
+}
+
+if (string.IsNullOrWhiteSpace(outFolderName)) throw new Exception("Folder name is bad! (programmer fault)");
 
 foreach (var file in toWrite)
 {
@@ -157,13 +184,24 @@ record SkellFile(string Name, string Contents)
 
 record Var(string Name, string Value)
 {
+    private const string Ask = "ask";
+    private static readonly int AskLen = Ask.Length;
+
     public static Var FromVarLine(string raw)
     {
-        // varName="the value"
-
         var split = raw.Split('=');
+        if (raw.StartsWith(Ask)) return DoAskLine(raw[AskLen..]);
         if (split.Length != 2) throw new Exception("Expected: varName=The String Value");
-
         return new(split[0], split[1]);
+    }
+
+    private static Var DoAskLine(string askLine)
+    {
+        var varName = askLine.Trim().Split(" ");
+        if (varName.Length == 0) throw new Exception();
+        Console.WriteLine($"{string.Join(" ", varName.Skip(1))}");
+        Console.Write($"{varName[0]}=");
+        var value = Console.ReadLine()!;
+        return new Var(varName[0], value);
     }
 }
